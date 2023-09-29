@@ -1,24 +1,43 @@
-import {
-  CheckCircledIcon,
-  FilePlusIcon,
-  GitHubLogoIcon,
-  MagicWandIcon,
-  UploadIcon,
-} from "@radix-ui/react-icons";
-import { Button } from "./components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "./components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { GitHubLogoIcon, MagicWandIcon } from "@radix-ui/react-icons";
+import { useCompletion } from "ai/react";
+import { useState } from "react";
+import { PromptInputForm } from "./components/prompt-input-form";
+import { Button } from "./components/ui/button";
+import { Label } from "./components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
+} from "./components/ui/select";
+import { Slider } from "./components/ui/slider";
+import { Textarea } from "./components/ui/textarea";
+import { VideoInputForm } from "./components/video-input-form";
 
 export function App() {
+  const [temperature, setTemperature] = useState(0.5);
+  const [videoId, setVideoId] = useState<string | null>(null);
+
+  const {
+    input,
+    setInput,
+    handleInputChange,
+    handleSubmit,
+    completion,
+    isLoading,
+  } = useCompletion({
+    api: "http://localhost:3333/ai/complete",
+    body: {
+      videoId,
+      temperature,
+    },
+    headers: {
+      "Content-type": "application/json",
+    },
+  });
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="px-6 py-3 flex item-center justify-between border-b">
@@ -39,10 +58,13 @@ export function App() {
             <Textarea
               className="resize-none p-4 leading-relaxed"
               placeholder="Inclua o prompt para a IA..."
+              value={input}
+              onChange={handleInputChange}
             />
             <Textarea
               className="resize-none p-4 leading-relaxed"
               placeholder="Resultado gerado pela IA..."
+              value={completion}
             />
           </div>
           <p className="text-sm text-muted-foreground">
@@ -56,64 +78,15 @@ export function App() {
           </p>
         </div>
         <aside className="w-80 space-y-6">
-          <form className="space-y-6">
-            <label
-              htmlFor="video"
-              className="border flex rounded-md aspect-video cursor-pointer border-dashed text-sm flex-col gap-2 items-center justify-center text-muted-foreground hover:bg-primary/5"
-            >
-              <FilePlusIcon className="w-6 h-6" />
-              Selecione um vídeo
-            </label>
-            <input
-              type="file"
-              id="video"
-              accept="video/mp4"
-              className=" sr-only"
-            />
-            <Separator
-              orientation="horizontal"
-              className="w-full h-px bg-zinc-500"
-            />
-            <div className="space-y-2">
-              <Label htmlFor="transcription_input" className="text-xl">
-                Prompt de transcrição
-              </Label>
-              <Textarea
-                id="transcription_input"
-                className="resize-none p-4 leading-relaxed"
-                placeholder="Inclua palavras-chave mencionadas no vídeo separadas por vírgula"
-              />
-            </div>
-            {/* <Button
-              type="submit"
-              className="border flex rounded-md w-full justify-center items-center"
-            >
-              Sucesso!
-              <CheckCircledIcon className="w-4 h-4 ml-1" />
-            </Button> */}
-            <Button type="submit" className="w-full">
-              Carregar vídeo
-              <UploadIcon className="w-4 h-4 ml-1" />
-            </Button>
-          </form>
+          <VideoInputForm onVideoUploaded={setVideoId} />
           <Separator
             orientation="horizontal"
             className="w-full h-0.5 bg-zinc-500"
           />
-          <form className="w-80 space-y-6">
+          <form onSubmit={handleSubmit} className="w-80 space-y-6">
             <div className="space-y-2">
               <Label>Prompt</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seelecione um prompt..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="youtube-description">
-                    Descrição Youtube
-                  </SelectItem>
-                  <SelectItem value="youtube-title">Título Youtube</SelectItem>
-                </SelectContent>
-              </Select>
+              <PromptInputForm onPromptSelected={setInput} />
             </div>
             <div className="space-y-2">
               <Label>Modelo</Label>
@@ -141,6 +114,8 @@ export function App() {
                 defaultValue={[0.5]}
                 max={1}
                 step={0.1}
+                value={[temperature]}
+                onValueChange={(value) => setTemperature(value[0])}
                 className=" cursor-pointer"
               />
               <span className="block text-xs text-muted-foreground italic">
@@ -149,7 +124,7 @@ export function App() {
               </span>
             </div>
             <Separator />
-            <Button type="submit" className="w-full">
+            <Button disabled={isLoading} type="submit" className="w-full">
               Executar
               <MagicWandIcon className="w-4 h-4 ml-1" />
             </Button>
